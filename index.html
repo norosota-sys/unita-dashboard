@@ -211,7 +211,7 @@ CARDS.forEach(({key, label}) => {
   const idl = ideal(plan);
   const color = bh <= 0 ? '#4ade80' : bh/idl > 0.2 ? '#f87171' : '#facc15';
   const chipClass = bh <= 0 ? 'chip-ahead' : bh/idl > 0.2 ? 'chip-behind' : 'chip-ok';
-  const chipText = bh <= 0 ? `▲${fmt(-bh)}件先行` : `▼${fmt(bh)}ビハインド`;
+  const chipText = bh <= 0 ? `▲${fmt(-bh)}件先行（日次理想比）` : `▼${fmt(bh)}ビハインド（日次理想比）`;
   const fillPct = Math.min(100, p);
   cardsEl.innerHTML += `
     <div class="kpi-card">
