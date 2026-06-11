@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UnitA KPIダッシュボード</title>
+<script src="unita_kpi_data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#13151f;color:#dde1f0;font-family:'Segoe UI',Meiryo,sans-serif;font-size:14px;padding:16px}
+h2{font-size:18px;font-weight:700;margin-bottom:12px}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px}
+.header h1{font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px}
+.header-meta{color:#9aa3c0;font-size:13px}
+.refresh-btn{background:#2a2d3e;border:1px solid #3a3f5c;color:#9aa3c0;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px}
+.refresh-btn:hover{background:#3a3f5c;color:#dde1f0}
+
+/* KPIカード */
+.kpi-cards{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.kpi-card{background:#1e2235;border-radius:10px;padding:14px 16px;min-width:120px;flex:1;border:1px solid #2a2d3e}
+.kpi-card .label{font-size:12px;color:#9aa3c0;margin-bottom:4px}
+.kpi-card .pct{font-size:28px;font-weight:700;margin-bottom:2px}
+.kpi-card .sub{font-size:12px;color:#9aa3c0}
+.kpi-card .chip{font-size:12px;margin-top:6px;padding:2px 8px;border-radius:20px;display:inline-block}
+.chip-ahead{background:rgba(34,197,94,.15);color:#4ade80}
+.chip-behind{background:rgba(239,68,68,.15);color:#f87171}
+.chip-ok{background:rgba(250,204,21,.15);color:#facc15}
+.bar-track{height:4px;background:#2a2d3e;border-radius:2px;margin-top:8px}
+.bar-fill{height:4px;border-radius:2px}
+
+/* セクション区切り */
+.section-divider{display:flex;align-items:center;gap:10px;margin:24px 0 14px}
+.section-divider.unit .bar{width:4px;height:22px;background:#7c3aed;border-radius:2px}
+.section-divider.mem .bar{width:4px;height:22px;background:#2563eb;border-radius:2px}
+.section-divider.action .bar{width:4px;height:22px;background:#0891b2;border-radius:2px}
+.section-divider .title{font-size:15px;font-weight:700;letter-spacing:.05em;color:#dde1f0}
+
+/* Unit分析テーブル */
+.unit-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+.unit-table th{background:#252840;color:#9aa3c0;font-size:12px;font-weight:600;padding:8px 10px;text-align:center;border-bottom:1px solid #2a2d3e}
+.unit-table td{padding:8px 10px;border-bottom:1px solid #252840;text-align:center}
+.unit-table tr:last-child td{border-bottom:none}
+.unit-table .kpi-name{text-align:left;font-weight:600;color:#dde1f0}
+.unit-table .emph td{background:rgba(124,58,237,.08)}
+.behind-red{color:#f87171;font-weight:600}
+.behind-ok{color:#4ade80;font-weight:600}
+.target-chip{background:#2a2d3e;border-radius:6px;padding:4px 8px;font-size:12px;display:inline-block;white-space:nowrap}
+
+/* 週次ボックス */
+.weekly-box{background:#1e2235;border:1px solid #2a2d3e;border-radius:10px;padding:16px;margin-bottom:16px}
+.weekly-box .wlabel{font-size:13px;color:#9aa3c0;margin-bottom:10px;font-weight:600}
+.weekly-row{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.weekly-item{text-align:center}
+.weekly-item .wval{font-size:24px;font-weight:700;color:#dde1f0}
+.shortage-box{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:8px}
+.shortage-box .snum{font-size:24px;font-weight:700;color:#f87171}
+.shortage-box .sdesc{font-size:12px;color:#f87171}
+
+/* アクション内訳テーブル */
+.action-table{width:100%;border-collapse:collapse;margin-bottom:8px}
+.action-table th{background:#1a2030;color:#9aa3c0;font-size:11px;font-weight:600;padding:7px 10px;text-align:center;border-bottom:1px solid #2a2d3e;white-space:nowrap}
+.action-table td{padding:7px 10px;border-bottom:1px solid #1a1d2e;text-align:center;vertical-align:middle}
+.action-table tr:hover td{background:#1e2235}
+.mem-name-s{font-weight:600;text-align:left!important;white-space:nowrap;font-size:12px}
+.ratio-bar-wrap{width:80px;height:8px;background:#2a2d3e;border-radius:4px;display:inline-block;vertical-align:middle;margin-left:4px}
+.ratio-bar-call{height:8px;border-radius:4px 0 0 4px;display:inline-block}
+.ratio-bar-sms{height:8px;border-radius:0 4px 4px 0;display:inline-block}
+.ratio-ok{color:#4ade80}
+.ratio-warn{color:#facc15}
+.ratio-ng{color:#f87171}
+.alert-chip{font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px}
+.chip-ng{background:rgba(239,68,68,.2);color:#f87171}
+.chip-warn{background:rgba(250,204,21,.2);color:#facc15}
+.chip-good{background:rgba(34,197,94,.2);color:#4ade80}
+
+/* メンバーテーブル */
+.mem-table-wrap{overflow-x:auto;margin-bottom:20px}
+.mem-table{width:100%;border-collapse:collapse;min-width:960px}
+.mem-table th{background:#252840;color:#9aa3c0;font-size:11px;font-weight:600;padding:7px 8px;text-align:center;border-bottom:1px solid #2a2d3e;white-space:nowrap}
+.mem-table td{padding:7px 8px;border-bottom:1px solid #1a1d2e;text-align:center;vertical-align:top}
+.mem-table tr:hover td{background:#1e2235}
+.mem-name{font-weight:600;text-align:left!important;white-space:nowrap}
+.kpi-val{font-size:13px;font-weight:600}
+.kpi-ideal{font-size:10px;color:#8890aa;margin-top:1px}
+.kpi-behind{font-size:11px;color:#f87171;margin-top:1px}
+.kpi-ahead{font-size:11px;color:#4ade80;margin-top:1px}
+.action-cell{text-align:left!important;font-size:11px;color:#9aa3c0;max-width:240px;line-height:1.6}
+.action-bottleneck{color:#fb923c;margin-bottom:3px;font-weight:600}
+.action-quant{color:#60a5fa;margin-bottom:2px}
+.action-qual{color:#a78bfa}
+.badge-warn{background:rgba(239,68,68,.15);color:#f87171;border-radius:4px;padding:1px 5px;font-size:10px}
+.badge-ok{background:rgba(34,197,94,.15);color:#4ade80;border-radius:4px;padding:1px 5px;font-size:10px}
+.funnel-rate{font-size:10px;color:#8890aa}
+
+/* トレンドグラフ */
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:20px}
+.chart-card{background:#1e2235;border-radius:10px;padding:12px;border:1px solid #2a2d3e}
+.chart-card .cname{font-size:12px;font-weight:700;margin-bottom:8px;color:#c0c8e0}
+.chart-card canvas{max-height:80px}
+
+/* 凡例 */
+.legend-box{background:#1e2235;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#9aa3c0;display:flex;flex-wrap:wrap;gap:12px}
+.legend-box b{color:#dde1f0}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>📊 関東第一グループ UnitA — KPIダッシュボード</h1>
+    <div class="header-meta" id="meta-line">読み込み中...</div>
+  </div>
+  <button class="refresh-btn" onclick="location.reload()">↺ 更新</button>
+</div>
+
+<div class="kpi-cards" id="kpi-cards"></div>
+
+<!-- ▌ UNIT 全体分析 -->
+<div class="section-divider unit">
+  <div class="bar"></div>
+  <div class="title">▌ UNIT 全体分析</div>
+</div>
+
+<div class="legend-box">
+  <span><b>消化率</b>＝今日時点の進捗%</span>
+  <span><b>理想値</b>＝月次計画×消化率</span>
+  <span><b>ビハインド</b>＝理想値－実績（▼＝遅れ、▲＝先行）</span>
+  <span><b>日次目標</b>＝日次ペース＋6/15回収分</span>
+  <span><b>1人あたり</b>＝ビハインド÷12名</span>
+</div>
+
+<div style="background:#1e2235;border-radius:10px;padding:16px;margin-bottom:16px;overflow-x:auto">
+  <table class="unit-table" id="unit-table"></table>
+</div>
+
+<div class="weekly-box" id="weekly-box"></div>
+
+<!-- ▌ アクション内訳（架電/SMS比率） -->
+<div class="section-divider action">
+  <div class="bar"></div>
+  <div class="title">▌ アクション内訳（架電 vs SMS）</div>
+</div>
+
+<div class="legend-box">
+  <span>🎯 <b>理想比率：架電66% / SMS34%</b></span>
+  <span><span class="ratio-ok">✅ 良好</span>：架電60%以上</span>
+  <span><span class="ratio-warn">⚠️ 要注意</span>：架電50〜60%</span>
+  <span><span class="ratio-ng">❌ 要改善</span>：架電50%未満（SMS過多）</span>
+</div>
+
+<div style="background:#1e2235;border-radius:10px;padding:16px;margin-bottom:16px;overflow-x:auto">
+  <table class="action-table" id="action-table"></table>
+</div>
+
+<!-- ▌ MEM 個別分析 -->
+<div class="section-divider mem">
+  <div class="bar"></div>
+  <div class="title">▌ MEM 個別分析（ボトルネック＋打ち手）</div>
+</div>
+
+<div class="mem-table-wrap">
+  <table class="mem-table" id="mem-table"></table>
+</div>
+
+<div class="charts-grid" id="charts-grid"></div>
+
+<script>
+const D = window.UNITA_KPI_DATA;
+if (!D) { document.body.innerHTML = '<div style="padding:40px;color:#f87171;font-size:18px">⚠️ データ未取得。unita_kpi_data.js が見つかりません。</div>'; throw new Error(); }
+
+const L = D.latest;
+const MEMBERS = D.members;
+const ELAPSED = L.elapsed_days || 7;
+const TOTAL_DAYS = 22;
+const PROGRESS = ELAPSED / TOTAL_DAYS;
+const MID_DAY = 11;
+const DAYS_TO_MID = Math.max(1, MID_DAY - ELAPSED);
+const N = 12;
+
+function fmt(n){ return (n||0).toLocaleString(); }
+function pct(a,b){ return b ? Math.round(a/b*100) : 0; }
+function ideal(plan){ return Math.round(plan * PROGRESS); }
+function behind(actual, plan){ return ideal(plan) - (actual||0); }
+function dailyPace(plan){ return plan / TOTAL_DAYS; }
+function r(n,d){ return d>0 ? Math.round(n/d*100) : 0; }
+
+// ── ヘッダーメタ ──────────────────────────
+const today = new Date(L.date || '2026-06-09');
+const mm = today.getMonth()+1, dd = today.getDate();
+document.getElementById('meta-line').textContent =
+  `2026年${mm}月 ｜ 消化${ELAPSED}日/${TOTAL_DAYS}日（進捗率${Math.round(PROGRESS*100)}%）｜ 最終更新: ${mm}/${String(dd).padStart(2,'0')} ｜ 残り${TOTAL_DAYS-ELAPSED}営業日`;
+
+// ── KPIカード ─────────────────────────────
+const CARDS = [
+  {key:'架電', label:'アクション数'},
+  {key:'面談', label:'面談'},
+  {key:'有効面談', label:'有効面談'},
+  {key:'提案', label:'提案'},
+  {key:'打診', label:'打診'},
+  {key:'設定', label:'設定'},
+  {key:'実施', label:'実施'},
+  {key:'内定', label:'内定'},
+  {key:'内諾', label:'内諾'},
+];
+const cardsEl = document.getElementById('kpi-cards');
+CARDS.forEach(({key, label}) => {
+  const act = L[key+'_actual']||0, plan = L[key+'_plan']||1;
+  const p = pct(act, plan);
+  const bh = behind(act, plan);
+  const idl = ideal(plan);
+  const color = bh <= 0 ? '#4ade80' : bh/idl > 0.2 ? '#f87171' : '#facc15';
+  const chipClass = bh <= 0 ? 'chip-ahead' : bh/idl > 0.2 ? 'chip-behind' : 'chip-ok';
+  const chipText = bh <= 0 ? `▲${fmt(-bh)}件先行` : `▼${fmt(bh)}ビハインド`;
+  const fillPct = Math.min(100, p);
+  cardsEl.innerHTML += `
+    <div class="kpi-card">
+      <div class="label">${label}</div>
+      <div class="pct" style="color:${color}">${p}%</div>
+      <div class="sub">${fmt(act)} / ${fmt(plan)}</div>
+      <span class="chip ${chipClass}">${chipText}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${fillPct}%;background:${color}"></div></div>
+    </div>`;
+});
+
+// ── Unit定量テーブル ──────────────────────
+const KPI_ROWS = [
+  {label:'実施', key:'実施', emph:true},
+  {label:'設定', key:'設定', emph:true},
+  {label:'打診', key:'打診', emph:false},
+  {label:'有効面談', key:'有効面談', emph:false},
+  {label:'面談', key:'面談', emph:false},
+  {label:'内定', key:'内定', emph:false},
+  {label:'内諾', key:'内諾', emph:false},
+  {label:'アクション数', key:'架電', emph:false},
+];
+let tbl = `<thead><tr>
+  <th style="text-align:left">KPI</th>
+  <th>実績</th><th>理想値</th><th>ビハインド</th><th>1人あたり</th><th>日次ペース</th><th>+回収分/日</th><th>今日の目標</th>
+</tr></thead><tbody>`;
+KPI_ROWS.forEach(({label, key, emph}) => {
+  const act = L[key+'_actual']||0, plan = L[key+'_plan']||1;
+  const idl = ideal(plan);
+  const bh = idl - act;
+  const pace = dailyPace(plan);
+  const recovery = bh > 0 ? bh / DAYS_TO_MID : 0;
+  const target = pace + recovery;
+  const perPerson = bh > 0 ? (bh/N).toFixed(1) : '−';
+  const bhCell = bh > 0
+    ? `<span class="behind-red">▼${fmt(bh)}件</span>`
+    : `<span class="behind-ok">▲${fmt(-bh)}件先行</span>`;
+  const targetCell = bh > 0
+    ? `<span class="target-chip">${pace.toFixed(1)}/日 + <span style="color:#f87171">${recovery.toFixed(1)}</span> = <b style="color:#60a5fa">${target.toFixed(1)}</b>件</span>`
+    : `<span class="target-chip" style="color:#4ade80">${pace.toFixed(1)}/日</span>`;
+  tbl += `<tr class="${emph?'emph':''}">
+    <td class="kpi-name">${label}</td>
+    <td><b>${fmt(act)}</b></td>
+    <td style="color:#9aa3c0">${fmt(idl)}</td>
+    <td>${bhCell}</td>
+    <td style="color:#9aa3c0">${perPerson}${bh>0?'件':''}${bh/N>=1&&bh>0?'<span class="badge-warn" style="margin-left:4px">要注意</span>':''}</td>
+    <td style="color:#9aa3c0">${pace.toFixed(1)}件</td>
+    <td style="color:${recovery>0?'#f87171':'#9aa3c0'}">${recovery>0?'+'+recovery.toFixed(1):'−'}</td>
+    <td>${targetCell}</td>
+  </tr>`;
+});
+tbl += '</tbody>';
+document.getElementById('unit-table').innerHTML = tbl;
+
+// ── 週次ボックス ──────────────────────────
+const prevTarget=11, prevActual=10, weekTarget=18;
+const weekBehind = prevTarget-prevActual;
+const weekTargetAdj = weekTarget+weekBehind;
+const weekScheduled = 16;
+const shortage = weekTargetAdj-weekScheduled;
+document.getElementById('weekly-box').innerHTML = `
+  <div class="wlabel">📅 今週（6/9〜6/13）実施状況</div>
+  <div class="weekly-row">
+    <div class="weekly-item"><div style="font-size:11px;color:#8890aa;margin-bottom:4px">先週目標</div><div class="wval">${prevTarget}件</div></div>
+    <div class="weekly-item"><div style="font-size:11px;color:#8890aa;margin-bottom:4px">先週実績</div><div class="wval">${prevActual}件 <span style="font-size:14px;color:#f87171">▼${weekBehind}</span></div></div>
+    <div class="weekly-item"><div style="font-size:11px;color:#8890aa;margin-bottom:4px">今週目標（ビハインド込）</div><div class="wval">${weekTargetAdj}件 <span style="font-size:12px;color:#9aa3c0">（本来${weekTarget}+先週BH${weekBehind}）</span></div></div>
+    <div class="weekly-item"><div style="font-size:11px;color:#8890aa;margin-bottom:4px">現状の実施予定</div><div class="wval">${weekScheduled}件</div></div>
+    ${shortage>0?`<div class="shortage-box"><div class="snum">▼${shortage}件</div><div class="sdesc">今週不足<br>追加確保必要</div></div>`:''}
+  </div>
+  <div style="margin-top:12px;font-size:12px;color:#9aa3c0">
+    💡 確保先候補：打診済み未実施（大内・山田・白田・鹿原）から今週中に押し込む。設定済み案件のフォローを優先。
+  </div>`;
+
+// ── アクション内訳テーブル（架電/SMS比率） ──
+const ORDER = ['水野航','北見純一','山中智博','神崎光太郎','大内陽仁','鈴木康之','板橋圭介','五十嵐創太','深田一輝','山田海人','鹿原芽唯','白田雅之'];
+
+let actTbl = `<thead><tr>
+  <th style="text-align:left">MEM</th>
+  <th>架電数</th><th>SMS数</th><th>総アクション</th>
+  <th>架電比率</th><th>SMS比率</th><th>比率バー</th><th>判定</th><th>指示</th>
+</tr></thead><tbody>`;
+
+let totalCall=0, totalSms=0;
+ORDER.forEach(name => {
+  const m = MEMBERS.find(x=>x.member_name===name)||{};
+  const call=m.sf_call||0, sms=m.sf_sms||0, total=call+sms;
+  totalCall+=call; totalSms+=sms;
+  const callPct = total>0?Math.round(call/total*100):0;
+  const smsPct = 100-callPct;
+  const barCallW = Math.round(callPct*0.8); // 80px base
+  const barSmsW = Math.round(80*0.8)-barCallW;
+
+  let judge, judgeChip, instruction;
+  if(callPct>=60){
+    judge='✅';judgeChip='chip-good';
+    instruction = callPct>85?'SMS比率が低すぎる可能性。SMS展開でリーチ拡大も検討':'良好。現状維持';
+  } else if(callPct>=50){
+    judge='▲';judgeChip='chip-warn';
+    instruction=`架電比率を${60-callPct}%上げ60%以上へ。SMS依存を減らしTELでナーチャリングを`;
+  } else {
+    judge='❌';judgeChip='chip-ng';
+    instruction=`架電優先に切替。SMS${smsPct}%は過多。架電${callPct}%→66%まで引き上げ必須`;
+  }
+
+  actTbl += `<tr>
+    <td class="mem-name-s">${name}</td>
+    <td><b>${fmt(call)}</b></td>
+    <td>${fmt(sms)}</td>
+    <td style="color:#9aa3c0">${fmt(total)}</td>
+    <td style="color:${callPct>=60?'#4ade80':callPct>=50?'#facc15':'#f87171'};font-weight:700">${callPct}%</td>
+    <td style="color:#9aa3c0">${smsPct}%</td>
+    <td>
+      <div style="width:80px;height:10px;background:#2a2d3e;border-radius:5px;overflow:hidden;display:inline-flex">
+        <div style="width:${callPct}%;background:#60a5fa;height:100%"></div>
+        <div style="width:${smsPct}%;background:#a78bfa;height:100%"></div>
+      </div>
+    </td>
+    <td><span class="alert-chip ${judgeChip}">${judge}</span></td>
+    <td style="font-size:11px;color:#9aa3c0;text-align:left;max-width:180px">${instruction}</td>
+  </tr>`;
+});
+const totalAll = totalCall+totalSms;
+const totalCallPct = Math.round(totalCall/totalAll*100);
+actTbl += `<tr style="background:rgba(124,58,237,.1);font-weight:700">
+  <td class="mem-name-s">Unit合計</td>
+  <td>${fmt(totalCall)}</td><td>${fmt(totalSms)}</td><td>${fmt(totalAll)}</td>
+  <td style="color:${totalCallPct>=60?'#4ade80':'#facc15'}">${totalCallPct}%</td>
+  <td style="color:#9aa3c0">${100-totalCallPct}%</td>
+  <td>
+    <div style="width:80px;height:10px;background:#2a2d3e;border-radius:5px;overflow:hidden;display:inline-flex">
+      <div style="width:${totalCallPct}%;background:#60a5fa;height:100%"></div>
+      <div style="width:${100-totalCallPct}%;background:#a78bfa;height:100%"></div>
+    </div>
+  </td>
+  <td colspan="2" style="font-size:11px;color:#9aa3c0;text-align:left">▌ 理想比率 架電66% / SMS34%</td>
+</tr>`;
+actTbl += '</tbody>';
+document.getElementById('action-table').innerHTML = actTbl;
+
+// ── ボトルネック特定（前工程ビハインド優先・重要度順） ──
+// 優先順位: 有効面談数 > 有効→打診率 > 設定数 > 設定→実施数
+function analyzeBottleneck(m) {
+  const indivYukou = (L['有効面談_plan']||0)/N;
+  const indivDashin = (L['打診_plan']||0)/N;
+  const indivSettei = (L['設定_plan']||0)/N;
+  const indivJisshi = (L['実施_plan']||0)/N;
+
+  const yukouIdl  = ideal(indivYukou);
+  const dashinIdl = ideal(indivDashin);
+  const setteiIdl = ideal(indivSettei);
+  const jisshiIdl = ideal(indivJisshi);
+
+  const yukouAct  = m['有効面談']||0;
+  const dashinAct = m['打診']||0;
+  const setteiAct = m['設定']||0;
+  const jisshiAct = m['実施']||0;
+
+  const yukouBH  = yukouIdl  - yukouAct;
+  const dashinBH = dashinIdl - dashinAct;
+  const setteBH  = setteiIdl - setteiAct;
+  const jisshBH  = jisshiIdl - jisshiAct;
+
+  // 有効→打診展開率（有効面談があるのに打診が少ない）
+  const yukouToDashinRate = yukouAct>0 ? dashinAct/yukouAct : null;
+
+  // 優先順位で最初にビハインドしているフェーズを返す
+  if(yukouBH > 0.5) return { phase:'有効面談', bh: Math.ceil(yukouBH), act: yukouAct, idl: yukouIdl };
+  if(yukouAct>0 && yukouToDashinRate !== null && yukouToDashinRate < 0.5 && dashinBH > 0.3)
+    return { phase:'有効→打診展開', bh: Math.ceil(dashinBH), act: dashinAct, idl: dashinIdl, rate: Math.round(yukouToDashinRate*100), from: yukouAct };
+  if(setteBH > 0.5) return { phase:'設定数', bh: Math.ceil(setteBH), act: setteiAct, idl: setteiIdl };
+  if(jisshBH > 0.5 && setteiAct>0) return { phase:'設定→実施', bh: Math.ceil(jisshBH), act: jisshiAct, idl: jisshiIdl, settei: setteiAct };
+  return null;
+}
+
+// ── 打ち手方針（文章ベース） ──
+function policy(m) {
+  const lines = [];
+  const call=m.sf_call||0, sms=m.sf_sms||0, total=call+sms;
+  const callPct = total>0?Math.round(call/total*100):0;
+  const men=m['面談']||0, yukou=m['有効面談']||0;
+  const dashin=m['打診']||0, settei=m['設定']||0, jisshi=m['実施']||0;
+
+  // ① 有効面談不足
+  const yukouIdl = ideal((L['有効面談_plan']||0)/N);
+  const yukouBH = yukouIdl - yukou;
+  if(yukouBH > 0.5) {
+    const yukouRate = men>0?Math.round(yukou/men*100):0;
+    if(yukouRate < 15) {
+      lines.push(`面談${men}件中 有効化${yukou}件（${yukouRate}%）は低水準。面談冒頭でキャリア軸の深掘りが足りていない可能性。ヒアリングシートを見直し、転職理由・軸・現状の不満を最初の15分で引き出す構成に変える`);
+    } else {
+      lines.push(`有効面談が理想より${Math.ceil(yukouBH)}件不足。面談数は${men}件あるが有効化できていない。条件ミスマッチの候補者への面談時間を削り、転職意欲が高い・要件合致の候補者に集中する`);
+    }
+  }
+
+  // ② 有効→打診 展開率が低い
+  if(yukou>0 && dashin/yukou < 0.5) {
+    const rate = Math.round(dashin/yukou*100);
+    lines.push(`有効面談${yukou}件に対し打診${dashin}件（展開率${rate}%）。有効面談済みの候補者に対して求人の提案・打診が追いついていない。有効面談後24時間以内に求人マッチングを完了し打診まで持っていく`);
+  }
+
+  // ③ 設定数不足
+  const setteiIdl = ideal((L['設定_plan']||0)/N);
+  const setteBH = setteiIdl - settei;
+  if(setteBH > 0.5 && dashin>0) {
+    lines.push(`打診${dashin}件に対し設定${settei}件と面接設定への転換が遅い。打診後のフォローが1回で終わっている可能性。打診翌日・3日後・1週間後のリマインドを徹底し、企業の日程を先出しして候補者の意思決定を促す`);
+  }
+
+  // ④ 設定→実施 落ち
+  if(settei>0 && jisshi===0) {
+    lines.push(`設定${settei}件が全て未実施。面接前日のリマインド架電・当日朝のメッセージ送付を確実に実施する。ドタキャンが続いているなら候補者のモチベーション確認を設定直後に行う`);
+  } else if(settei>0 && jisshi/settei < 0.6) {
+    lines.push(`設定${settei}件中 実施${jisshi}件（${Math.round(jisshi/settei*100)}%）。前日リマインド＋当日朝フォローを徹底し実施率を上げる`);
+  }
+
+  // ⑤ 架電/SMS比率
+  if(total>0 && callPct < 50) {
+    lines.push(`架電比率${callPct}%でSMS偏重。SMSは見てもらえない可能性が高く、面談獲得には架電が不可欠。1日のアクションのうち最低3分の2は架電に振り直す`);
+  } else if(total>0 && callPct < 60) {
+    lines.push(`架電比率${callPct}%でやや低め。SMSと並行して架電でのアプローチ比率を高めること`);
+  }
+
+  // 何も問題なければ
+  if(lines.length===0) lines.push('現状の進捗は概ね順調。引き続き打診・設定のペースを維持する');
+
+  return lines;
+}
+
+// ── メンバーテーブル ──────────────────────
+let memHtml = `<thead><tr>
+  <th style="text-align:left">MEM</th>
+  <th>面談</th><th>有効<br>面談</th><th>提案</th><th>打診</th><th>設定</th><th>実施</th>
+  <th>最大ボトルネック</th>
+  <th>打ち手方針</th>
+</tr></thead><tbody>`;
+
+ORDER.forEach(name => {
+  const m = MEMBERS.find(x=>x.member_name===name)||{member_name:name};
+  function kpiCell(key, planKey){
+    const act=m[key]||0;
+    const indivPlan=(L[planKey+'_plan']||0)/N;
+    const idl=ideal(indivPlan);
+    const bh=idl-act;
+    const bhHtml = bh>0?`<div class="kpi-behind">▼${bh}件不足</div>`:bh<0?`<div class="kpi-ahead">▲${-bh}件先行</div>`:'';
+    return `<td><div class="kpi-val">${act}</div><div class="kpi-ideal">理想:${idl}</div>${bhHtml}</td>`;
+  }
+
+  const bn = analyzeBottleneck(m);
+  let bnHtml = '<span style="color:#4ade80;font-size:11px">問題なし</span>';
+  if(bn){
+    const col = bn.bh>=3?'#f87171':bn.bh>=2?'#facc15':'#fb923c';
+    let detail = '';
+    if(bn.phase==='有効面談'){
+      detail = `現在${bn.act}件 ／ 理想${bn.idl}件`;
+    } else if(bn.phase==='有効→打診展開'){
+      detail = `有効面談${bn.from}件中 打診${bn.act}件（展開率${bn.rate}%）`;
+    } else if(bn.phase==='設定数'){
+      detail = `現在${bn.act}件 ／ 理想${bn.idl}件`;
+    } else if(bn.phase==='設定→実施'){
+      detail = `設定${bn.settei}件中 実施${bn.act}件`;
+    }
+    bnHtml = `<div style="color:${col};font-size:11px;font-weight:700">📍 ${bn.phase}</div>
+      <div style="font-size:10px;color:#c0c8e0;margin-top:2px">${detail}</div>
+      <div style="font-size:10px;color:${col};margin-top:1px">▼${bn.bh}件 不足</div>`;
+  }
+
+  const lines = policy(m);
+  const policyHtml = lines.map((l,i) =>
+    `<div style="margin-bottom:${i<lines.length-1?'6px':'0'};color:#c0c8e0;font-size:11px;line-height:1.6">
+      <span style="color:#60a5fa;font-weight:700">${i+1}. </span>${l}
+    </div>`
+  ).join('');
+
+  memHtml += `<tr>
+    <td class="mem-name">${name}</td>
+    ${kpiCell('面談','面談')}
+    ${kpiCell('有効面談','有効面談')}
+    ${kpiCell('提案','提案')}
+    ${kpiCell('打診','打診')}
+    ${kpiCell('設定','設定')}
+    ${kpiCell('実施','実施')}
+    <td style="vertical-align:top;min-width:160px">${bnHtml}</td>
+    <td class="action-cell" style="min-width:220px">${policyHtml}</td>
+  </tr>`;
+});
+memHtml += '</tbody>';
+document.getElementById('mem-table').innerHTML = memHtml;
+
+// ── ミニトレンドチャート ──────────────────
+const chartsEl = document.getElementById('charts-grid');
+const CHART_KEYS = [
+  {key:'実施', color:'#7c3aed'},
+  {key:'打診', color:'#2563eb'},
+  {key:'設定', color:'#0891b2'},
+  {key:'有効面談', color:'#059669'},
+];
+ORDER.forEach(name => {
+  const trend=(D.member_trend||{})[name]||[];
+  if(!trend.length) return;
+  const labels=trend.map(t=>t.date.slice(5));
+  const div=document.createElement('div');
+  div.className='chart-card';
+  div.innerHTML=`<div class="cname">${name}</div><canvas id="chart-${name.replace(/\s/g,'')}"></canvas>`;
+  chartsEl.appendChild(div);
+  setTimeout(()=>{
+    const ctx=document.getElementById(`chart-${name.replace(/\s/g,'')}`).getContext('2d');
+    new Chart(ctx,{
+      type:'line',
+      data:{
+        labels,
+        datasets:CHART_KEYS.map(({key,color})=>({
+          label:key, data:trend.map(t=>t[key]||0),
+          borderColor:color, backgroundColor:color+'22',
+          tension:0.3, pointRadius:3, borderWidth:2, fill:false,
+        }))
+      },
+      options:{
+        responsive:true,
+        plugins:{legend:{labels:{color:'#9aa3c0',font:{size:10},boxWidth:10}}},
+        scales:{
+          x:{ticks:{color:'#8890aa',font:{size:9}},grid:{color:'#2a2d3e'}},
+          y:{ticks:{color:'#8890aa',font:{size:9}},grid:{color:'#2a2d3e'},beginAtZero:true}
+        }
+      }
+    });
+  },0);
+});
+</script>
+</body>
+</html>
