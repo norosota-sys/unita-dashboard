@@ -143,10 +143,10 @@ h2{font-size:18px;font-weight:700;margin-bottom:12px}
 </div>
 
 <div class="legend-box">
-  <span>🎯 <b>理想比率：架電66% / SMS34%</b></span>
-  <span><span class="ratio-ok">✅ 良好</span>：架電60%以上</span>
-  <span><span class="ratio-warn">⚠️ 要注意</span>：架電50〜60%</span>
-  <span><span class="ratio-ng">❌ 要改善</span>：架電50%未満（SMS過多）</span>
+  <span>🎯 <b>Unit方針：架電80%以上を目標</b></span>
+  <span><span class="ratio-ok">✅ 良好</span>：架電80%以上</span>
+  <span><span class="ratio-warn">⚠️ 要注意</span>：架電60〜79%</span>
+  <span><span class="ratio-ng">❌ 要改善</span>：架電60%未満（架電比率を大幅に上げる）</span>
 </div>
 
 <div style="background:#1e2235;border-radius:10px;padding:16px;margin-bottom:16px;overflow-x:auto">
@@ -305,15 +305,15 @@ ORDER.forEach(name => {
   const barSmsW = Math.round(80*0.8)-barCallW;
 
   let judge, judgeChip, instruction;
-  if(callPct>=60){
+  if(callPct>=80){
     judge='✅';judgeChip='chip-good';
-    instruction = callPct>85?'SMS比率が低すぎる可能性。SMS展開でリーチ拡大も検討':'良好。現状維持';
-  } else if(callPct>=50){
+    instruction='良好。架電比率80%以上を維持';
+  } else if(callPct>=60){
     judge='▲';judgeChip='chip-warn';
-    instruction=`架電比率を${60-callPct}%上げ60%以上へ。SMS依存を減らしTELでナーチャリングを`;
+    instruction=`架電比率${callPct}%。あと${80-callPct}%上げて80%以上を目指す。SMS比率を削って架電に振り直す`;
   } else {
     judge='❌';judgeChip='chip-ng';
-    instruction=`架電優先に切替。SMS${smsPct}%は過多。架電${callPct}%→66%まで引き上げ必須`;
+    instruction=`架電${callPct}%で大幅に不足。1日のアクションの8割は架電に振り直す。SMS比率を20%以下に絞る`;
   }
 
   actTbl += `<tr>
@@ -321,7 +321,7 @@ ORDER.forEach(name => {
     <td><b>${fmt(call)}</b></td>
     <td>${fmt(sms)}</td>
     <td style="color:#9aa3c0">${fmt(total)}</td>
-    <td style="color:${callPct>=60?'#4ade80':callPct>=50?'#facc15':'#f87171'};font-weight:700">${callPct}%</td>
+    <td style="color:${callPct>=80?'#4ade80':callPct>=60?'#facc15':'#f87171'};font-weight:700">${callPct}%</td>
     <td style="color:#9aa3c0">${smsPct}%</td>
     <td>
       <div style="width:80px;height:10px;background:#2a2d3e;border-radius:5px;overflow:hidden;display:inline-flex">
@@ -346,7 +346,7 @@ actTbl += `<tr style="background:rgba(124,58,237,.1);font-weight:700">
       <div style="width:${100-totalCallPct}%;background:#a78bfa;height:100%"></div>
     </div>
   </td>
-  <td colspan="2" style="font-size:11px;color:#9aa3c0;text-align:left">▌ 理想比率 架電66% / SMS34%</td>
+  <td colspan="2" style="font-size:11px;color:#9aa3c0;text-align:left">▌ Unit方針：架電80%以上を目標</td>
 </tr>`;
 actTbl += '</tbody>';
 document.getElementById('action-table').innerHTML = actTbl;
@@ -426,11 +426,11 @@ function policy(m) {
     lines.push(`設定${settei}件中 実施${jisshi}件（${Math.round(jisshi/settei*100)}%）。前日リマインド＋当日朝フォローを徹底し実施率を上げる`);
   }
 
-  // ⑤ 架電/SMS比率
-  if(total>0 && callPct < 50) {
-    lines.push(`架電比率${callPct}%でSMS偏重。SMSは見てもらえない可能性が高く、面談獲得には架電が不可欠。1日のアクションのうち最低3分の2は架電に振り直す`);
-  } else if(total>0 && callPct < 60) {
-    lines.push(`架電比率${callPct}%でやや低め。SMSと並行して架電でのアプローチ比率を高めること`);
+  // ⑤ 架電/SMS比率（Unit方針：80%以上）
+  if(total>0 && callPct < 60) {
+    lines.push(`架電比率${callPct}%で大幅不足（目標80%）。1日のアクションの8割を架電に振り直す。SMS比率を20%以下に絞る`);
+  } else if(total>0 && callPct < 80) {
+    lines.push(`架電比率${callPct}%（目標80%）。あと${80-callPct}%上げる。SMS比率を削って架電に寄せること`);
   }
 
   // 何も問題なければ
