@@ -267,22 +267,22 @@ tbl += '</tbody>';
 document.getElementById('unit-table').innerHTML = tbl;
 
 // ── 週次ボックス ──────────────────────────
-const prevTarget=11, prevActual=10, weekTarget=18;
+const prevTarget=19, prevActual=6, weekTarget=19;
 const weekBehind = prevTarget-prevActual;
 const weekTargetAdj = weekTarget+weekBehind;
-const weekScheduled = 16;
+const weekScheduled = 21;
 const shortage = weekTargetAdj-weekScheduled;
 document.getElementById('weekly-box').innerHTML = `
-  <div class="wlabel">📅 今週（6/9〜6/13）実施状況</div>
+  <div class="wlabel">📅 今週（6/16〜6/20）実施状況</div>
   <div class="weekly-row">
-    <div class="weekly-item"><div style="font-size:11px;color:#8890aa;margin-bottom:4px">先週目標</div><div class="wval">${prevTarget}件</div></div>
+    <div class="weekly-item"><div style="font-size:11px;color:#8890aa;margin-bottom:4px">先週目標（6/9〜6/13）</div><div class="wval">${prevTarget}件</div></div>
     <div class="weekly-item"><div style="font-size:11px;color:#8890aa;margin-bottom:4px">先週実績</div><div class="wval">${prevActual}件 <span style="font-size:14px;color:#f87171">▼${weekBehind}</span></div></div>
     <div class="weekly-item"><div style="font-size:11px;color:#8890aa;margin-bottom:4px">今週目標（ビハインド込）</div><div class="wval">${weekTargetAdj}件 <span style="font-size:12px;color:#9aa3c0">（本来${weekTarget}+先週BH${weekBehind}）</span></div></div>
-    <div class="weekly-item"><div style="font-size:11px;color:#8890aa;margin-bottom:4px">現状の実施予定</div><div class="wval">${weekScheduled}件</div></div>
+    <div class="weekly-item"><div style="font-size:11px;color:#8890aa;margin-bottom:4px">設定済み未実施（回収候補）</div><div class="wval">${weekScheduled}件</div></div>
     ${shortage>0?`<div class="shortage-box"><div class="snum">▼${shortage}件</div><div class="sdesc">今週不足<br>追加確保必要</div></div>`:''}
   </div>
   <div style="margin-top:12px;font-size:12px;color:#9aa3c0">
-    💡 確保先候補：打診済み未実施（大内・山田・白田・鹿原）から今週中に押し込む。設定済み案件のフォローを優先。
+    💡 設定済み未実施が多いMEM：水野（4件）・白田（4件）・北見（3件）・鹿原（3件）。今週中に押し込む。
   </div>`;
 
 // ── アクション内訳テーブル（架電/SMS比率） ──
